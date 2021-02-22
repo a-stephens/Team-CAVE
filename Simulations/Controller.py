@@ -1,3 +1,5 @@
+# Team CAVE steering control sim
+
 import numpy as np
 import matplotlib.pyplot as plt
 ################################################################################
