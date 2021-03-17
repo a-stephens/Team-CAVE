@@ -15,7 +15,7 @@ pose = np.array([
     0
 ]).reshape(4,1)
 
-lin_spd = 0.1
+lin_spd = 0
 
 # these would come from master commands
 way_x = np.array([
@@ -35,6 +35,9 @@ act_path_y = np.array([])
 
 #tracking_x = np.array([])
 #tracking_y = np.array([])
+itr = 0
+
+dist_i = 0
 
 while 1:
     # generate semicircle
@@ -58,6 +61,12 @@ while 1:
             min_dist = dist
     #tracking_x = np.append(tracking_x, circ[pt_i,0])
     #tracking_y = np.append(tracking_y, circ[pt_i,1])
+    dist_i += dist
+    lin_spd = 0.1 * min_dist + 0.001 * dist_i
+    
+    if lin_spd > 1.2:
+        lin_spd = 1.2
+    print(lin_spd)
 
     alpha = angles[pt_i] - pose[2]
     e_ld = LOOK_DIST * np.sin(alpha)
@@ -94,6 +103,9 @@ while 1:
     # out of way_pts to use
     if tracker >= way_pts.shape[0]:
         break
+
+    itr += 1
+print(itr)
 
 plt.plot(act_path_x, act_path_y, 'r*')
 #plt.plot(tracking_x, tracking_y, 'y*')
