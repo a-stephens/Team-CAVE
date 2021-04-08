@@ -3,28 +3,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
 ################################################################################
-WHEELBASE = 0.1
-LOOK_DIST = 0.5
+WHEELBASE = 10 # in
+LOOK_DIST = 12 # in
 ANGLE_RES = 100
-TOLERABLE_DIST = 0.5
+TOLERABLE_DIST = 10 # in
 ################################################################################
 pose = np.array([
-    0,
-    0,
-    0,
+    -8*12,
+    5*12,
+    -np.pi/2,
     0
-]).reshape(4,1)
+], dtype="float64").reshape(4,1)
 
 lin_spd = 0
 
+# waypoint bounds: -144 to 144 in
 # these would come from master commands
 way_x = np.array([
-    3, -2, -1, 2
-])
+    -8*12, 6*12, 4*12, 10*12
+], dtype="float64")
 way_x = way_x.reshape(way_x.shape[0], 1)
 way_y = np.array([
-    0, 4, -4, -3
-])
+    4*12, -2*12, -8*12, -5*12
+], dtype="float64")
 way_y = way_y.reshape(way_y.shape[0], 1)
 way_pts = np.hstack((way_x, way_y))
 tracker = 0
@@ -62,10 +63,10 @@ while 1:
     #tracking_x = np.append(tracking_x, circ[pt_i,0])
     #tracking_y = np.append(tracking_y, circ[pt_i,1])
     dist_i += dist
-    lin_spd = 0.1 * min_dist + 0.001 * dist_i
+    lin_spd = 0.1 * min_dist + 0.003 * dist_i
     
-    if lin_spd > 1.2:
-        lin_spd = 1.2
+    if lin_spd > 11:
+        lin_spd = 11
     print(lin_spd)
 
     alpha = angles[pt_i] - pose[2]
@@ -84,17 +85,21 @@ while 1:
                 lin_spd * np.cos(pose[2]),
                 lin_spd * np.sin(pose[2]),
                 lin_spd * pose[3] / WHEELBASE
-    ]).reshape(3,1)
+    ], dtype="float64").reshape(3,1)
     pose = np.array([
         speeds[0] * 0.1 + pose[0],
         speeds[1] * 0.1 + pose[1],
         speeds[2] * 0.1 + pose[2],
         steering_angle
-    ]).reshape(4,1)
+    ], dtype="float64").reshape(4,1)
 
     # determine if tracking way_pt is close enough to change current way_pt
+    if tracker == way_pts.shape[0] - 1:
+        tol_dist = 2.5
+    else:
+        tol_dist = TOLERABLE_DIST
     dist_to_goal = np.linalg.norm(way_pts[tracker] - pose[0:2].reshape(1,2))
-    if dist_to_goal < TOLERABLE_DIST and tracker < way_pts.shape[0]:
+    if dist_to_goal < tol_dist and tracker < way_pts.shape[0]:
         tracker = tracker + 1
 
     act_path_x = np.append(act_path_x, pose[0])
@@ -105,11 +110,10 @@ while 1:
         break
 
     itr += 1
-print(itr)
 
 plt.plot(act_path_x, act_path_y, 'r*')
 #plt.plot(tracking_x, tracking_y, 'y*')
 plt.plot(way_x, way_y, 'b*')
-plt.xlim([-5, 5])
-plt.ylim([-5, 5])
+plt.xlim([-144, 144]) # represents a 12'x12' field
+plt.ylim([-144, 144])
 plt.show()
