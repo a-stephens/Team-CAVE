@@ -3,13 +3,18 @@ from DCMotorControl import FIT_Motor
 from time import sleep
 from time import time
 import numpy as np
+# import matplotlib.pyplot as plt
 
 def main():
     WHEELBASE = 9.75 # in
     LOOK_DIST = 12 # in
     ANGLE_RES = 100
-    TOLERABLE_DIST = 10 # in
+    TOLERABLE_DIST = 30 # in
     STEPS_TO_DEG = 0.0202
+    MAX_STEERING_ANGLE = 27 # deg
+
+    # plotting_x = []
+    # plotting_y = []
 
     pose = np.array([
         0,
@@ -21,12 +26,12 @@ def main():
     lin_spd = 0
 
     way_x = np.array([
-        0*12, 2*12
+        0*12, 5*12, 5*12, 3*12
     ], dtype="float64")
     way_x = way_x.reshape(way_x.shape[0], 1)
 
     way_y = np.array([
-        2*12, 2*12
+        4*12, 4*12, 7*12, 7*12
     ], dtype="float64")
     way_y = way_y.reshape(way_y.shape[0], 1)
 
@@ -39,6 +44,8 @@ def main():
 
     dist_i = 0
     step_err = 0
+
+    tol_dist = TOLERABLE_DIST
 
     raw_input("Press any key to start")
 
@@ -62,8 +69,11 @@ def main():
             if dist < min_dist:
                 pt_i = cnt
                 min_dist = dist
-        dist_i += dist
-        lin_spd = 0.1 * min_dist + 0.003 * dist_i - 1.5 * step_err
+        
+        dist_to_goal = np.linalg.norm(way_pts[tracker] - pose[0:2].reshape(1,2))
+
+        dist_i += (dist_to_goal - tol_dist)
+        lin_spd = 0.15 * (dist_to_goal - tol_dist) - 25 * np.abs(step_err) + 0.003 * dist_i
         
         if lin_spd > 20.8:
             lin_spd = 20.8
@@ -76,17 +86,17 @@ def main():
         steering_angle = np.arctan2(2 * WHEELBASE * e_ld, LOOK_DIST**2)
 
         #saturate steering angle
-        if steering_angle >= 27*np.pi/180.0:
-            steering_angle = 27*np.pi/180.0
-        if steering_angle <= -27*np.pi/180.0:
-            steering_angle = -27*np.pi/180.0
+        if steering_angle >= MAX_STEERING_ANGLE*np.pi/180.0:
+            steering_angle = MAX_STEERING_ANGLE*np.pi/180.0
+        if steering_angle <= -MAX_STEERING_ANGLE*np.pi/180.0:
+            steering_angle = -MAX_STEERING_ANGLE*np.pi/180.0
 
         # control vehicle
-        tot_time = time() - time_start
+        
         dc_motor.setSpeed(lin_spd)
-        stepper_angle = -1*stepper._direction * stepper.steps * STEPS_TO_DEG
+        stepper_angle = stepper._direction * stepper.steps * STEPS_TO_DEG
         step_err = (steering_angle * 180.0 / np.pi) - stepper_angle
-        if np.abs(step_err) > 0.001:
+        if np.abs(step_err) > 0.1:
             if step_err < 0:
                 stepper.changeDirection()
                 stepper.step()
@@ -95,6 +105,7 @@ def main():
                 stepper.step()
         stepper_angle = stepper_angle * np.pi / 180.0
 
+        tot_time = time() - time_start
         # calculate new state vectors
         speeds = np.array([
                     lin_spd * np.cos(pose[2]),
@@ -108,26 +119,52 @@ def main():
             stepper_angle
         ], dtype="float64").reshape(4,1)
 
+        # plotting_x.append(pose[0][0]/12.0)
+        # plotting_y.append(pose[1][0]/12.0)
+
         # determine if tracking way_pt is close enough to change current way_pt
         if tracker == way_pts.shape[0] - 1:
-            tol_dist = 1
+            tol_dist = 3
         else:
             tol_dist = TOLERABLE_DIST
-        dist_to_goal = np.linalg.norm(way_pts[tracker] - pose[0:2].reshape(1,2))
         if dist_to_goal < tol_dist and tracker < way_pts.shape[0]:
+            dist_i = 0
             tracker = tracker + 1
 
         if tracker >= way_pts.shape[0]:
             break
 
-        #print([pose[0][0], pose[1][0]])
-        print("{} {}".format(pose[0][0], pose[1][0]))
-        print(stepper.steps)
-        sleep(0.001)
+        print("Position: {}ft {}ft".format(pose[0][0]/12.0, pose[1][0]/12.0))
+        print("Goal: {}ft {}ft".format(way_pts[tracker][0]/12.0, way_pts[tracker][1]/12.0))
+        print("Speed: {}in/s Dist to goal: {}in".format(lin_spd, dist_to_goal))
+        if np.abs(stepper.steps) > 1500:
+            print("STEPS EXCEEDED LIMIT, EMERGENCY BREAK")
+            break
+        #sleep(0.001) # too slow to bother using currently
     
     dc_motor.setStop()
     print("navigation complete")
+    print("Current Steering Angle: {}deg".format(stepper._direction * stepper.steps * STEPS_TO_DEG))
+    print("Reverting to steering angle 0 from step {}".format(stepper.steps))
+    while np.abs(stepper.steps) != 0:
+        if stepper.steps < 0:
+            stepper.changeDirection()
+            stepper.step()
+            stepper.changeDirection()
+        else:
+            stepper.step()
+        sleep(0.001)
+
+    print("Current Steering Angle: {}deg".format(stepper._direction * stepper.steps * STEPS_TO_DEG))
+
     raw_input("press any key to stop")
+    # print("Plotting")
+    # plt.figure(1)
+    # plt.plot(plotting_x, plotting_y, 'r*')
+    # plt.plot(way_x/12.0, way_y/12.0, 'b*')
+    # plt.xlim((-12,12))
+    # plt.ylim((-12,12))
+    # plt.show()
 
 if __name__ == "__main__":
     main()

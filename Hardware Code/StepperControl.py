@@ -50,34 +50,35 @@ class Stepper_28BYJ_48:
                 pin.off()
 
 def main():
+    STEPS_TO_DEG = 0.0202
+
     # basic control test
     stepper = Stepper_28BYJ_48(4,17,27,22) # change pins accordingly, use GPIO #
     stepper._update()
-    input_val = input("Please input a number of steps to turn: ")
 
-    for i in range(0,input_val):
-        stepper.step()
-        #print(stepper._currentStep)
+    in_deg = input("Input the desired steering angle in degrees")
+    des_steer = in_deg*np.pi/180.0
+    starting_steer = 0
+
+    step_err = des_steer - starting_steer
+    while np.abs(step_err) > 0.1:
+        stepper_angle = stepper._direction * stepper.steps * STEPS_TO_DEG
+        step_err = (des_steer * 180.0 / np.pi) - stepper_angle
+
+        if step_err < 0:
+            stepper.changeDirection()
+            stepper.step()
+            stepper.changeDirection()
+        else:
+            stepper.step()
+        
+        print("Angle: {}deg Goal: {}deg".format(stepper_angle, des_steer*180.0/np.pi))
+        print(stepper.steps)
+
+        if np.abs(stepper.steps) >= 1500:
+            break
+
         sleep(0.001)
-
-    inner_wheel = input("Please input the inner wheel steering angle in degrees: ")
-    outer_wheel = input("Please input the outer wheel steering angle in degrees: ")
-
-    steering_angle_1 = np.arctan(1.0 / ((1.0/np.tan(np.pi*inner_wheel/180.0)) + (7.25/(2*9.75))))
-    steering_angle_2 = np.arctan(1.0 / ((1.0/np.tan(np.pi*outer_wheel/180.0)) - (7.25/(2*9.75))))
-    steering_angle = (steering_angle_1 + steering_angle_2) / 2.0
-    steering_angle = steering_angle * 180.0 / np.pi
-
-    print("Moving back to initial position...")
-    sleep(2)
-    stepper.changeDirection()
-
-    for i in range(0,input_val):
-        stepper.step()
-        #print(stepper._currentStep)
-        sleep(0.001)
-
-    print("Individual Steering Angles: {} {} Steering angle: {}".format(steering_angle_1 * 180 / np.pi, steering_angle_2 * 180 / np.pi, steering_angle))
 
     raw_input("Press any key to continue")
 
