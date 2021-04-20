@@ -47,29 +47,6 @@ itr = 0
 dist_i = 0
 
 while 1:
-    # generate semicircle
-    # angle_start = pose[2] - np.pi
-    # angle_end   = pose[2] + np.pi
-
-    # angles = np.linspace(angle_start, angle_end, ANGLE_RES)
-
-    # x_circ = LOOK_DIST * np.cos(angles) + pose[0]
-    # y_circ = LOOK_DIST * np.sin(angles) + pose[1]
-
-    # circ = np.hstack((x_circ, y_circ))
-
-    # find tracking point on circle compared to current tracking way_pt
-    # pt_i = 0
-    # min_dist = 1000000
-    # for cnt, c_pt in enumerate(circ):
-    #     dist = np.linalg.norm(way_pts[tracker] - c_pt)
-    #     if dist < min_dist:
-    #         pt_i = cnt
-    #         min_dist = dist
-    # tracking_x = np.append(tracking_x, circ[pt_i,0])
-    # tracking_y = np.append(tracking_y, circ[pt_i,1])
-
-    
     vec1 = np.array([np.cos(pose[2][0]), np.sin(pose[2][0])])
     intermed_vec = np.array([pose[0][0], pose[1][0]])
     vec2 = way_pts[tracker] - intermed_vec
@@ -77,7 +54,6 @@ while 1:
     dist_to_goal = np.linalg.norm(pose[0:2].reshape(1,2) - way_pts[tracker])
 
     ang2 = np.arctan2(vec2[1], vec2[0]) - np.arctan2(vec1[1], vec1[0])
-
 
     dist_i += dist_to_goal
     lin_spd = 0.1 * dist_to_goal + 0.003 * dist_i
